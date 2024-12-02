@@ -1,0 +1,566 @@
+options:
+  parameters:
+    author: Steffen Robertz
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: no_gui
+    hier_block_src_path: '.:'
+    id: esl_sender_full
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: esl sender full
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: bt
+  id: variable
+  parameters:
+    comment: ''
+    value: fsk_deviation_hz/data_samp_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [808, 16.0]
+    rotation: 0
+    state: enabled
+- name: data_samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '175000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [488, 16.0]
+    rotation: 0
+    state: enabled
+- name: fsk_deviation_hz
+  id: variable
+  parameters:
+    comment: ''
+    value: '50000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [296, 16.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '2100000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [200, 16.0]
+    rotation: 0
+    state: enabled
+- name: sensitivity
+  id: variable
+  parameters:
+    comment: ''
+    value: 2*math.pi*fsk_deviation_hz/samp_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [600, 16.0]
+    rotation: 0
+    state: enabled
+- name: sps
+  id: variable
+  parameters:
+    comment: ''
+    value: round(samp_rate/data_samp_rate)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [416, 16.0]
+    rotation: 0
+    state: enabled
+- name: analog_frequency_modulator_fc_0
+  id: analog_frequency_modulator_fc
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    sensitivity: 2*math.pi*fsk_deviation_hz/samp_rate
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [584, 336.0]
+    rotation: 0
+    state: true
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Blocks:\n\nEach time this file is saved,\
+      \ GRC will instantiate the first class it finds\nto get ports and parameters\
+      \ of your block. The arguments to __init__  will\nbe the parameters. All of\
+      \ them are required to have default values!\n\"\"\"\n\nfrom configparser import\
+      \ Interpolation\nfrom random import sample\nfrom tkinter.filedialog import Open\n\
+      import numpy as np\nfrom gnuradio import gr\nimport pmt\nimport hexdump\nimport\
+      \ math\n\n\nclass blk(gr.sync_block):  # other base classes are basic_block,\
+      \ decim_block, interp_block\n    \"\"\"Embedded Python Block example - a simple\
+      \ multiply const\"\"\"\n\n    def __init__(self, input_file=None, packet_length=23,\
+      \ silence_samples=0, interpolation=1):  # only default arguments here\n    \
+      \    \"\"\"arguments to this function show up as parameters in GRC\"\"\"\n \
+      \       gr.sync_block.__init__(\n            self,\n            name='Wakeup\
+      \ Signal Source',   # will show up in GRC\n            in_sig=None,\n      \
+      \      out_sig=[np.single]\n        )\n        # if an attribute with the same\
+      \ name as a parameter is found,\n        # a callback is registered (properties\
+      \ work, too).\n        self.packet_length = packet_length\n        if input_file\
+      \ != None:\n            self.input_file = open(input_file,'rb')\n        self.silence_samples\
+      \ = silence_samples\n        self.silence_samples_missing = 0 \n        self.bytes_read\
+      \ = 0\n        self.interpolation = interpolation\n\n    def work(self, input_items,\
+      \ output_items):\n        #handle first call\n        if self.nitems_written(0)\
+      \ == 0:\n             self.add_item_tag(0, 0, pmt.intern(\"Burst\"), pmt.intern(\"\
+      SOB\"))\n        \n        #Handle missing silence samples first:\n        if\
+      \ self.silence_samples_missing:\n            samples_to_transmit = min(len(output_items[0]),\
+      \ self.silence_samples_missing)\n            #print(\"Going to transmit {} silence\
+      \ samples\".format(samples_to_transmit))\n            append_array = np.zeros(samples_to_transmit,\
+      \ dtype=float)\n            output_items[0][:samples_to_transmit] = append_array\n\
+      \            self.silence_samples_missing -= samples_to_transmit\n         \
+      \   return samples_to_transmit\n        \n        current_bytes_read = 0\n \
+      \       for i in range(0,math.floor((math.floor(len(output_items[0])/8)/self.interpolation))):\n\
+      \            frame_byte = self.input_file.read(1)\n            if len(frame_byte)\
+      \ == 0:\n                return i*8\n            for j in range(0,8):\n    \
+      \            data = -1.0\n                if (frame_byte[0]&(1<<(7-j)))>>(7-j):\n\
+      \                    #transmit 1\n                    data = 1.0\n         \
+      \       output_items[0][i*8+j:i*8+j+self.interpolation] = np.full(self.interpolation,\
+      \ data)\n            current_bytes_read += 1\n            self.bytes_read +=\
+      \ 1 \n            if self.bytes_read % self.packet_length == 0:\n          \
+      \      #Add silence samples\n                #print(\"Read {} bytes\".format(self.bytes_read))\n\
+      \                self.silence_samples_missing = self.silence_samples\n     \
+      \           #set end of busrt (EOB), to last bit\n                self.add_item_tag(0,\
+      \ self.nitems_written(0)+current_bytes_read*8*self.interpolation+3, pmt.intern(\"\
+      Burst\"), pmt.intern(\"EOB\"))\n                #set start of burst (SOB)\n\
+      \                self.add_item_tag(0, self.nitems_written(0)+(current_bytes_read*8+self.silence_samples)*self.interpolation,\
+      \ pmt.intern(\"Burst\"), pmt.intern(\"SOB\"))\n                #print(\"Adding\
+      \ silence into leftover space\")\n                samples_to_transmit = min(len(output_items[0])-(current_bytes_read*8*self.interpolation),\
+      \ self.silence_samples_missing)\n                #print(\"GHoing to add {} silence\
+      \ bytes\".format(samples_to_transmit))\n                append_array = np.zeros(samples_to_transmit,\
+      \ dtype=float)\n                output_items[0][current_bytes_read*8:current_bytes_read*8+samples_to_transmit]\
+      \ = append_array\n                self.silence_samples_missing -= samples_to_transmit\n\
+      \                return current_bytes_read*8 + samples_to_transmit\n       \
+      \ return current_bytes_read*8*self.interpolation\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    input_file: '"/tmp/wakeup_in"'
+    interpolation: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    packet_length: '23'
+    silence_samples: '0'
+  states:
+    _io_cache: ('Wakeup Signal Source', 'blk', [('input_file', 'None'), ('packet_length',
+      '23'), ('silence_samples', '0'), ('interpolation', '1')], [], [('0', 'float',
+      1)], 'Embedded Python Block example - a simple multiply const', ['interpolation',
+      'packet_length', 'silence_samples'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1888, 96.0]
+    rotation: 0
+    state: disabled
+- name: epy_block_3
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"\nEmbedded Python Blocks:\n\nEach time this file is saved,\
+      \ GRC will instantiate the first class it finds\nto get ports and parameters\
+      \ of your block. The arguments to __init__  will\nbe the parameters. All of\
+      \ them are required to have default values!\n\"\"\"\n\nimport numpy as np\n\
+      from gnuradio import gr\nimport pmt\nimport cmath\n\n\nclass blk(gr.sync_block):\
+      \  # other base classes are basic_block, decim_block, interp_block\n    \"\"\
+      \"Embedded Python Block example - a simple multiply const\"\"\"\n\n    def __init__(self,\
+      \ ):  # only default arguments here\n        \"\"\"arguments to this function\
+      \ show up as parameters in GRC\"\"\"\n        gr.sync_block.__init__(\n    \
+      \        self,\n            name='Mute non burst samples',   # will show up\
+      \ in GRC\n            in_sig=[np.complex64],\n            out_sig=[np.complex64]\n\
+      \        )\n        # if an attribute with the same name as a parameter is found,\n\
+      \        # a callback is registered (properties work, too).\n        self.received_eob\
+      \ = False\n\n\n    def work(self, input_items, output_items):\n        #print(\"\
+      New iteration\")\n        mute_areas = []\n        tags = self.get_tags_in_window(0,\
+      \ 0, len(input_items[0]))\n        for tag in tags:\n            key = pmt.to_python(tag.key)\n\
+      \            value = pmt.to_python(tag.value)\n            if key == 'Burst'\
+      \ and value == 'EOB':\n                self.received_eob = True\n          \
+      \      #print(\"EOB at: {}\".format(tag.offset))\n                mute_areas.append([tag.offset-self.nitems_written(0),len(input_items[0])])\n\
+      \            elif key == 'Burst' and value == 'SOB':\n                #print(\"\
+      SOB at: {}\".format(tag.offset))\n                self.received_eob = False\n\
+      \                if len(mute_areas) == 0:\n                    mute_areas.append([0,0])\n\
+      \                index = tag.offset-self.nitems_written(0)\n               \
+      \ mute_areas[-1][1] = index\n\n        if len(tags) == 0 and self.received_eob:\n\
+      \            #Everything is muted\n            mute_areas.append([0,len(input_items[0])])\n\
+      \        \n        output_items[0][:] = input_items[0][:]\n        #print(mute_areas)\n\
+      \        for start,stop in mute_areas:\n            for i in range(start, stop):\n\
+      \                #print(\"muting\")\n                output_items[0][i] = cmath.rect(0,\
+      \ cmath.phase(input_items[0][i]))\n        #print(\"Produced: {}\".format(len(input_items[0])))\n\
+      \        return len(input_items[0])\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('Mute non burst samples', 'blk', [], [('0', 'complex', 1)], [('0',
+      'complex', 1)], 'Embedded Python Block example - a simple multiply const', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1936, 48.0]
+    rotation: 0
+    state: disabled
+- name: esl_img_source_0
+  id: esl_img_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    file_path: ''
+    height: '103'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: Image Source
+    samp_rate: samp_rate
+    tag_id: int(0x05b6b6)
+    width: '215'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [56, 304.0]
+    rotation: 0
+    state: true
+- name: import_0
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: import math
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [720, 32.0]
+    rotation: 0
+    state: true
+- name: interp_fir_filter_xxx_0
+  id: interp_fir_filter_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_delay: '0'
+    taps: '[1.0370673503984351e-12,1.4448351369489298e-11,1.7457865708614406e-10,1.82947135218825e-09,1.6627293319970704e-08,1.3106269136642368e-07,8.959796673480014e-07,5.312253506417619e-06,2.731624226726126e-05,0.00012182170758023858,0.000471183389890939,0.0015805811854079366,0.004598383326083422,0.011602593585848808,0.025390228256583214,0.04818807914853096,0.07931844145059586,0.11323229968547821,0.14019353687763214,0.150538370013237,0.14019353687763214,0.11323229968547821,0.07931844145059586,0.04818807914853096,0.025390228256583214,0.011602593585848808,0.004598383326083422,0.0015805811854079366,0.000471183389890939,0.00012182170758023858,2.731624226726126e-05,5.312253506417619e-06,8.959796673480014e-07,1.3106269136642368e-07,1.6627293319970704e-08,1.82947135218825e-09,1.7457865708614406e-10,1.4448351369489298e-11,1.0370673503984351e-12,6.455906230613817e-14]'
+    type: fff
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [304, 328.0]
+    rotation: 0
+    state: enabled
+- name: osmosdr_sink_0
+  id: osmosdr_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    ant0: ''
+    ant1: ''
+    ant10: ''
+    ant11: ''
+    ant12: ''
+    ant13: ''
+    ant14: ''
+    ant15: ''
+    ant16: ''
+    ant17: ''
+    ant18: ''
+    ant19: ''
+    ant2: ''
+    ant20: ''
+    ant21: ''
+    ant22: ''
+    ant23: ''
+    ant24: ''
+    ant25: ''
+    ant26: ''
+    ant27: ''
+    ant28: ''
+    ant29: ''
+    ant3: ''
+    ant30: ''
+    ant31: ''
+    ant4: ''
+    ant5: ''
+    ant6: ''
+    ant7: ''
+    ant8: ''
+    ant9: ''
+    args: '"hackrf=000000000000000075b068dc321a7307"'
+    bb_gain0: '0'
+    bb_gain1: '20'
+    bb_gain10: '20'
+    bb_gain11: '20'
+    bb_gain12: '20'
+    bb_gain13: '20'
+    bb_gain14: '20'
+    bb_gain15: '20'
+    bb_gain16: '20'
+    bb_gain17: '20'
+    bb_gain18: '20'
+    bb_gain19: '20'
+    bb_gain2: '20'
+    bb_gain20: '20'
+    bb_gain21: '20'
+    bb_gain22: '20'
+    bb_gain23: '20'
+    bb_gain24: '20'
+    bb_gain25: '20'
+    bb_gain26: '20'
+    bb_gain27: '20'
+    bb_gain28: '20'
+    bb_gain29: '20'
+    bb_gain3: '20'
+    bb_gain30: '20'
+    bb_gain31: '20'
+    bb_gain4: '20'
+    bb_gain5: '20'
+    bb_gain6: '20'
+    bb_gain7: '20'
+    bb_gain8: '20'
+    bb_gain9: '20'
+    bw0: samp_rate
+    bw1: '0'
+    bw10: '0'
+    bw11: '0'
+    bw12: '0'
+    bw13: '0'
+    bw14: '0'
+    bw15: '0'
+    bw16: '0'
+    bw17: '0'
+    bw18: '0'
+    bw19: '0'
+    bw2: '0'
+    bw20: '0'
+    bw21: '0'
+    bw22: '0'
+    bw23: '0'
+    bw24: '0'
+    bw25: '0'
+    bw26: '0'
+    bw27: '0'
+    bw28: '0'
+    bw29: '0'
+    bw3: '0'
+    bw30: '0'
+    bw31: '0'
+    bw4: '0'
+    bw5: '0'
+    bw6: '0'
+    bw7: '0'
+    bw8: '0'
+    bw9: '0'
+    clock_source0: ''
+    clock_source1: ''
+    clock_source2: ''
+    clock_source3: ''
+    clock_source4: ''
+    clock_source5: ''
+    clock_source6: ''
+    clock_source7: ''
+    comment: ''
+    corr0: '0'
+    corr1: '0'
+    corr10: '0'
+    corr11: '0'
+    corr12: '0'
+    corr13: '0'
+    corr14: '0'
+    corr15: '0'
+    corr16: '0'
+    corr17: '0'
+    corr18: '0'
+    corr19: '0'
+    corr2: '0'
+    corr20: '0'
+    corr21: '0'
+    corr22: '0'
+    corr23: '0'
+    corr24: '0'
+    corr25: '0'
+    corr26: '0'
+    corr27: '0'
+    corr28: '0'
+    corr29: '0'
+    corr3: '0'
+    corr30: '0'
+    corr31: '0'
+    corr4: '0'
+    corr5: '0'
+    corr6: '0'
+    corr7: '0'
+    corr8: '0'
+    corr9: '0'
+    freq0: '433260000'
+    freq1: 100e6
+    freq10: 100e6
+    freq11: 100e6
+    freq12: 100e6
+    freq13: 100e6
+    freq14: 100e6
+    freq15: 100e6
+    freq16: 100e6
+    freq17: 100e6
+    freq18: 100e6
+    freq19: 100e6
+    freq2: 100e6
+    freq20: 100e6
+    freq21: 100e6
+    freq22: 100e6
+    freq23: 100e6
+    freq24: 100e6
+    freq25: 100e6
+    freq26: 100e6
+    freq27: 100e6
+    freq28: 100e6
+    freq29: 100e6
+    freq3: 100e6
+    freq30: 100e6
+    freq31: 100e6
+    freq4: 100e6
+    freq5: 100e6
+    freq6: 100e6
+    freq7: 100e6
+    freq8: 100e6
+    freq9: 100e6
+    gain0: '14'
+    gain1: '10'
+    gain10: '10'
+    gain11: '10'
+    gain12: '10'
+    gain13: '10'
+    gain14: '10'
+    gain15: '10'
+    gain16: '10'
+    gain17: '10'
+    gain18: '10'
+    gain19: '10'
+    gain2: '10'
+    gain20: '10'
+    gain21: '10'
+    gain22: '10'
+    gain23: '10'
+    gain24: '10'
+    gain25: '10'
+    gain26: '10'
+    gain27: '10'
+    gain28: '10'
+    gain29: '10'
+    gain3: '10'
+    gain30: '10'
+    gain31: '10'
+    gain4: '10'
+    gain5: '10'
+    gain6: '10'
+    gain7: '10'
+    gain8: '10'
+    gain9: '10'
+    if_gain0: '48'
+    if_gain1: '20'
+    if_gain10: '20'
+    if_gain11: '20'
+    if_gain12: '20'
+    if_gain13: '20'
+    if_gain14: '20'
+    if_gain15: '20'
+    if_gain16: '20'
+    if_gain17: '20'
+    if_gain18: '20'
+    if_gain19: '20'
+    if_gain2: '20'
+    if_gain20: '20'
+    if_gain21: '20'
+    if_gain22: '20'
+    if_gain23: '20'
+    if_gain24: '20'
+    if_gain25: '20'
+    if_gain26: '20'
+    if_gain27: '20'
+    if_gain28: '20'
+    if_gain29: '20'
+    if_gain3: '20'
+    if_gain30: '20'
+    if_gain31: '20'
+    if_gain4: '20'
+    if_gain5: '20'
+    if_gain6: '20'
+    if_gain7: '20'
+    if_gain8: '20'
+    if_gain9: '20'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    nchan: '1'
+    num_mboards: '1'
+    sample_rate: samp_rate
+    sync: sync
+    time_source0: ''
+    time_source1: ''
+    time_source2: ''
+    time_source3: ''
+    time_source4: ''
+    time_source5: ''
+    time_source6: ''
+    time_source7: ''
+    type: fc32
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [816, 244.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [analog_frequency_modulator_fc_0, '0', osmosdr_sink_0, '0']
+- [esl_img_source_0, '0', interp_fir_filter_xxx_0, '0']
+- [interp_fir_filter_xxx_0, '0', analog_frequency_modulator_fc_0, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.11.0
